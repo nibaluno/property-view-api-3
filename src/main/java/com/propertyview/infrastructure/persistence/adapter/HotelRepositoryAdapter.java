@@ -33,8 +33,6 @@ public class HotelRepositoryAdapter implements HotelRepository {
         this.mapper = mapper;
     }
 
-
-
     @Override
     @Transactional
     public Hotel save(Hotel hotel) {
@@ -47,11 +45,23 @@ public class HotelRepositoryAdapter implements HotelRepository {
     }
 
     @Override
-    public Optional<Hotel> findById(long id) {return hotels.findByIdWithAmenities(id).map(mapper::toDomain);}
-
+    public Optional<Hotel> findById(long id) {
+        return hotels.findByIdWithAmenities(id).map(mapper::toDomain);
+    }
 
     @Override
-    public List<HotelOverview> findAllOverviews() {return hotels.findAll(BY_ID).stream().map(mapper::toOverview).toList();}
+    @Transactional
+    public void deleteById(long id) {
+        if (!hotels.existsById(id)) {
+            throw new HotelNotFoundException(id);
+        }
+        hotels.deleteById(id);
+    }
+
+    @Override
+    public List<HotelOverview> findAllOverviews() {
+        return hotels.findAll(BY_ID).stream().map(mapper::toOverview).toList();
+    }
 
     @Override
     public List<HotelOverview> search(HotelSearchCriteria criteria) {
@@ -59,19 +69,33 @@ public class HotelRepositoryAdapter implements HotelRepository {
             .stream().map(mapper::toOverview).toList();
     }
 
+    @Override
+    public Map<String, Long> countByBrand() {
+        return sorted(hotels.countByBrand());
+    }
 
-    @Override public Map<String, Long> countByBrand()   { return sorted(hotels.countByBrand()); }
-    @Override public Map<String, Long> countByCity()    { return sorted(hotels.countByCity()); }
-    @Override public Map<String, Long> countByCountry() { return sorted(hotels.countByCountry()); }
-    @Override public Map<String, Long> countByAmenity() { return sorted(hotels.countByAmenity()); }
+    @Override
+    public Map<String, Long> countByCity() {
+        return sorted(hotels.countByCity());
+    }
 
+    @Override
+    public Map<String, Long> countByCountry() {
+        return sorted(hotels.countByCountry());
+    }
 
+    @Override
+    public Map<String, Long> countByAmenity() {
+        return sorted(hotels.countByAmenity());
+    }
 
     private void appendMissingAmenities(HotelEntity entity, Set<Amenity> wanted) {
         Set<String> present = entity.getAmenities().stream()
             .map(AmenityEntity::getNormalizedName).collect(Collectors.toSet());
         List<Amenity> missing = wanted.stream().filter(a -> !present.contains(a.normalizedName())).toList();
-        if (missing.isEmpty()) return;
+        if (missing.isEmpty()) {
+            return;
+        }
 
         Map<String, AmenityEntity> known = amenities
             .findByNormalizedNameIn(missing.stream().map(Amenity::normalizedName).toList())
@@ -83,8 +107,6 @@ public class HotelRepositoryAdapter implements HotelRepository {
             entity.getAmenities().add(e);
         }
     }
-
-
 
     private static Map<String, Long> sorted(List<CountRow> rows) {
         Map<String, Long> result = new LinkedHashMap<>();

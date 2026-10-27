@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"><title>Postman Collection Run Report — Property View API</title>
+<style>
+body { font-family: -apple-system, sans-serif; margin: 2rem; background: #f8fafc; color: #0f172a; }
+table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 1rem; }
+th, td { border: 1px solid #cbd5e1; padding: 0.6rem 0.8rem; text-align: left; font-size: 0.9rem; }
+th { background: #1e3a8a; color: #fff; }
+.summary { display: flex; gap: 1.5rem; margin: 1rem 0; }
+.card { background: #fff; border: 1px solid #cbd5e1; padding: 1rem 1.5rem; border-radius: 8px; }
+</style></head>
+<body>
+<h1>Отчёт выполнения коллекции Postman — Property View API</h1>
+<div class="summary">
+  <div class="card"><strong>Всего запросов:</strong> 15</div>
+  <div class="card"><strong>Успешно:</strong> 15 (100%)</div>
+  <div class="card"><strong>Всего проверок (Assertions):</strong> 24 / 24 PASSED</div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>Запрос</th><th>Метод</th><th>URL</th><th>Статус</th><th>Время</th><th>Результат</th></tr></thead>
+  <tbody><tr><td>1</td><td>1. Auth — Login as Alice (saves authToken)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/auth/login</code></td><td><strong>200</strong></td><td>41.72 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>2</td><td>2. Auth — Login as Bob (saves otherToken for IDOR test)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/auth/login</code></td><td><strong>200</strong></td><td>2.18 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>3</td><td>3. Hotels — Create Hotel (Positive, saves hotelId)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/hotels</code></td><td><strong>201</strong></td><td>45.15 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>4</td><td>4. Amenities — Add Amenities to Created Hotel (Positive)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/hotels/1/amenities</code></td><td><strong>200</strong></td><td>42.48 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>5</td><td>5. Hotels — Get Hotel Details by ID (Positive)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels/1</code></td><td><strong>200</strong></td><td>3.2 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>6</td><td>6. Hotels — Get All Hotels Brief List (Positive)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels</code></td><td><strong>200</strong></td><td>3.02 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>7</td><td>7. Search — Filter by City and Amenities (Positive)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/search?city=minsk&amenities=Free%20WiFi,Concierge</code></td><td><strong>200</strong></td><td>16.75 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>8</td><td>8. Histogram — Group by Amenities (Positive)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/histogram/amenities</code></td><td><strong>200</strong></td><td>9.45 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>9</td><td>9. Security — Claim Ownership with Alice Token (Chained Request)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/hotels/1/claim</code></td><td><strong>204</strong></td><td>3.5 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>10</td><td>10. Security — Access Management Zone without Auth (Negative 401)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels/1/management</code></td><td><strong>401</strong></td><td>6.26 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>11</td><td>11. Security — IDOR Attempt by Bob on Alice Hotel (Negative 403)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels/1/management</code></td><td><strong>403</strong></td><td>3.22 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>12</td><td>12. Security — Owner Access Management Zone with Alice Token (Positive 200)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels/1/management</code></td><td><strong>200</strong></td><td>2.56 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>13</td><td>13. Negative — Create Hotel with Invalid Payload (400 Bad Request)</td><td><code>POST</code></td><td><code>http://localhost:8092/property-view/hotels</code></td><td><strong>400</strong></td><td>8.7 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>14</td><td>14. Negative — Unknown Histogram Parameter (400 Bad Request)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/histogram/stars</code></td><td><strong>400</strong></td><td>1.82 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr>
+<tr><td>15</td><td>15. Negative — Unknown Hotel ID and Non-existent Endpoint (404 Not Found)</td><td><code>GET</code></td><td><code>http://localhost:8092/property-view/hotels/999999</code></td><td><strong>404</strong></td><td>2.34 ms</td><td style='color:#15803d;font-weight:bold'>PASSED</td></tr></tbody>
+</table>
+</body></html>

@@ -1,141 +1,185 @@
-# property-view-api
+# Property View API — Система управления каталогом отелей
 
-RESTful API for managing hotels. Java 21, Spring Boot 4, Spring Data JPA, Liquibase, H2.
+Веб-приложение (RESTful API + веб-клиент каталога и аналитики) для централизованного управления информацией об отелях, их адресными и контактными данными, удобствами (amenities), многокритериального поиска и построения аналитических гистограмм распределения отелей.
 
-## Requirements
-- JDK 21
-- Maven 3.9+
+## 1. Назначение и целевые пользователи
 
-## Run
-    mvn spring-boot:run
+**Назначение проекта:** предоставление единого стандартизированного интерфейса (HTTP REST API и пользовательского веб-интерфейса) для регистрации отелей, обогащения карточек списком удобств, быстрого поиска объектов размещения по комбинации фильтров и получения агрегированной аналитики по брендам, городам, странам и удобствам.
 
-The app starts on http://localhost:8092 with an empty in-memory H2 database.
-All endpoints share the prefix `/property-view`.
+**Целевые пользователи:**
+- **Клиенты и путешественники (Гости):** просматривают каталог отелей, детальные карточки объектов (адрес, контакты, время заезда/выезда, список удобств) и выполняют поиск отелей по городу, стране, бренду и набору удобств через веб-интерфейс или клиентские приложения.
+- **Контент-менеджеры и администраторы каталога (Отельеры):** регистрируют новые отели в системе (`POST /hotels`) и поддерживают актуальный перечень удобств каждого отеля (`POST /hotels/{id}/amenities`).
+- **Бизнес-аналитики гостиничных сетей:** используют эндпоинты гистограмм (`GET /histogram/{param}`) для оценки географического присутствия брендов и оснащённости отелей удобствами.
+- **Внешние партнёрские сервисы и агрегаторы (B2B API-клиенты):** интегрируются с системой по REST API (OpenAPI 3.0) для синхронизации справочника отелей.
 
-- Swagger UI: http://localhost:8092/property-view/swagger-ui.html
-- OpenAPI JSON: http://localhost:8092/property-view/v3/api-docs
+## 2. Технологический стек
 
-## API
-| Method | Path | Description |
+| Категория | Технология / Инструмент | Назначение |
 |---|---|---|
-| GET | /property-view/hotels | List of hotels (brief) |
-| GET | /property-view/hotels/{id} | Hotel details |
-| GET | /property-view/search | Search by name, brand, city, country, amenities |
-| POST | /property-view/hotels | Create a hotel |
-| POST | /property-view/hotels/{id}/amenities | Add amenities to a hotel |
-| GET | /property-view/histogram/{param} | Count of hotels grouped by brand, city, country or amenities |
+| **Язык программирования** | Java 21 (LTS) | Основной язык разработки (records, pattern matching, Virtual Threads / HttpClient) |
+| **Фреймворк приложения** | Spring Boot 4.0.8 | Конфигурация, DI-контейнер, встроенный сервер Tomcat |
+| **Веб-слой и валидация** | Spring WebMVC, Jakarta Bean Validation | Обработка REST-запросов, валидация DTO, RFC 7807 `ProblemDetail` |
+| **Доступ к данным (ORM)** | Spring Data JPA, Hibernate | Работа с реляционными БД, динамическая фильтрация через `Specification` |
+| **СУБД** | H2 (in-memory), PostgreSQL 16, MySQL 8.4 | Основное хранилище данных (переключение через профили Spring) |
+| **Миграции БД** | Liquibase (YAML changelog) | Версионирование и управление схемой БД (`ddl-auto=validate`) |
+| **Маппинг объектов** | MapStruct 1.6.3 | Кодогенерация мапперов между Entity и Domain Value Objects |
+| **Документация и UI** | Springdoc OpenAPI 3.0.3 (Swagger UI) + HTML5/CSS3/JS веб-клиент | Интерактивная документация API и пользовательский интерфейс каталога |
+| **Тестирование и качество** | JUnit 5, Mockito, AssertJ, ArchUnit 1.4.1, Playwright, JaCoCo, Checkstyle | Модульное, интеграционное, архитектурное, UI и нагрузочное тестирование |
 
-## Examples
+## 3. Архитектура системы
 
-Create a hotel (`description` and `arrivalTime.checkOut` are optional):
+Проект реализован по принципам **Clean Architecture (Луковая / Гексагональная архитектура)** внутри единого Maven-модуля. Зависимости исходного кода направлены строго внутрь (от `presentation` и `infrastructure` к `application` и `domain`), что автоматически контролируется тестами ArchUnit (`ArchitectureTest`).
 
-    curl -i -X POST http://localhost:8092/property-view/hotels \
-      -H 'Content-Type: application/json' -d '{
-      "name": "DoubleTree by Hilton Minsk",
-      "description": "The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms ...",
-      "brand": "Hilton",
-      "address": {"houseNumber": 9, "street": "Pobediteley Avenue", "city": "Minsk", "country": "Belarus", "postCode": "220004"},
-      "contacts": {"phone": "+375 17 309-80-00", "email": "doubletreeminsk.info@hilton.com"},
-      "arrivalTime": {"checkIn": "14:00", "checkOut": "12:00"}
-    }'
+### Схема основных компонентов и связей между ними
 
-Response (`201 Created`, header `Location: .../property-view/hotels/1`):
+```mermaid
+graph TB
+    subgraph Clients["Клиенты и внешние потребители"]
+        WebUI["Веб-клиент каталога\n(/property-view/index.html)"]
+        Swagger["Swagger UI / Postman\n(/property-view/swagger-ui.html)"]
+    end
 
-    {
-      "id": 1,
-      "name": "DoubleTree by Hilton Minsk",
-      "description": "The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms ...",
-      "address": "9 Pobediteley Avenue, Minsk, 220004, Belarus",
-      "phone": "+375 17 309-80-00"
-    }
+    subgraph Presentation["Слой представления (com.propertyview.presentation.web)"]
+        HC["HotelController\n(GET/POST /hotels)"]
+        HAC["HotelAmenityController\n(POST /hotels/{id}/amenities)"]
+        SC["SearchController\n(GET /search)"]
+        HGC["HistogramController\n(GET /histogram/{param})"]
+        GEH["GlobalExceptionHandler\n(RFC 7807 ProblemDetail)"]
+        SecFilter["ApiKeyAuthFilter\n(Защита модифицирующих операций и IDOR)"]
+    end
 
-Add amenities (returns the full updated hotel):
+    subgraph Application["Прикладной слой (com.propertyview.application)"]
+        PortsIn["Входные порты (Use Cases)\nCreateHotel | AddAmenities | GetHotel(s) | Search | Histogram"]
+        Services["Сервисы сценариев\nCreateHotelService | AddAmenitiesService\nHotelQueryService | SearchHotelsService | HistogramService"]
+        HistStrat["Стратегии гистограмм\nHistogramProvider / RepositoryHistogramProvider"]
+    end
 
-    curl -X POST http://localhost:8092/property-view/hotels/1/amenities \
-      -H 'Content-Type: application/json' \
-      -d '["Free parking", "Free WiFi", "Concierge"]'
+    subgraph Domain["Доменный слой (com.propertyview.domain)"]
+        Agg["Агрегат Hotel\n+ Value Objects: Address, Contacts, ArrivalTime, Amenity"]
+        RepoPort["Выходной порт HotelRepository"]
+        ExtPort["Выходной порт AddressVerificationPort"]
+    end
 
-Read, search and count:
+    subgraph Infrastructure["Инфраструктурный слой (com.propertyview.infrastructure)"]
+        JpaAdapter["HotelRepositoryAdapter\n+ HotelSpecifications"]
+        JpaRepos["Spring Data JPA\nHotelJpaRepository | AmenityJpaRepository"]
+        ExtAdapter["HttpAddressVerificationClient\n(RestClient -> Внешний HTTP-сервис)"]
+        Liquibase["Liquibase YAML Миграции"]
+    end
 
-    curl http://localhost:8092/property-view/hotels
-    curl http://localhost:8092/property-view/hotels/1
-    curl "http://localhost:8092/property-view/search?city=minsk"
-    curl -G http://localhost:8092/property-view/search \
-      --data-urlencode "amenities=Free WiFi" --data-urlencode "amenities=Concierge"
-    curl http://localhost:8092/property-view/histogram/city
+    subgraph External["СУБД и внешние системы"]
+        DB[("СУБД: H2 / PostgreSQL / MySQL\n(hotel, amenity, hotel_amenity)")]
+        GeoAPI["Внешний HTTP-сервис\nверификации адресов"]
+    end
 
-Histogram response:
+    WebUI --> SecFilter
+    Swagger --> SecFilter
+    SecFilter --> HC & HAC & SC & HGC
+    HC & HAC & SC & HGC --> PortsIn
+    PortsIn --> Services
+    Services --> HistStrat
+    Services --> Agg
+    Services --> RepoPort
+    Services --> ExtPort
+    JpaAdapter -.->|реализует| RepoPort
+    ExtAdapter -.->|реализует| ExtPort
+    JpaAdapter --> JpaRepos
+    JpaRepos --> DB
+    Liquibase --> DB
+    ExtAdapter --> GeoAPI
+```
 
-    { "Minsk": 1, "Moscow": 2 }
+## 4. Перечень модулей и их ответственность
 
-## How the API behaves
-- `POST /hotels` returns `201 Created` with a `Location` header and the brief hotel info.
-- `POST /hotels/{id}/amenities` returns `200 OK` with the full details of the updated hotel.
-- Duplicate amenities are ignored without an error. "Free WiFi" and "free wifi" are the same amenity.
-  The first spelling is kept, and amenities keep the order in which they were added.
-- All fields are required except `description` and `arrivalTime.checkOut`.
-  A missing or invalid field returns `400 Bad Request` with the list of problems.
-- Search: `name` matches a part of the name, `brand`, `city` and `country` must match completely.
-  Letter case is ignored everywhere. `amenities` can be repeated (`?amenities=A&amenities=B`)
-  or comma-separated, and the hotel must have all of them.
-  All filters are combined with AND. Without filters the search returns all hotels.
-- Histogram: an unknown parameter returns `400 Bad Request`. Keys are sorted alphabetically.
-- An unknown hotel id returns `404 Not Found`.
-- Errors are returned as `application/problem+json`.
-- Time is written as `HH:mm`.
-- The database is empty at start, so the first created hotel gets `id = 1`.
+| Модуль (Пакет) | Основные классы и интерфейсы | Зона ответственности |
+|---|---|---|
+| `com.propertyview.domain.model` | `Hotel`, `Address`, `Contacts`, `ArrivalTime`, `Amenity`, `HotelOverview`, `HotelSearchCriteria`, `Preconditions` | Ядро бизнес-логики без привязки к фреймворкам: инварианты агрегата `Hotel`, нормализация и регистронезависимая дедупликация удобств (`Amenity`), форматирование адреса, критерии поиска |
+| `com.propertyview.domain.port` | `HotelRepository`, `AddressVerificationPort` | Интерфейсы выходных портов (Storage и внешняя HTTP-верификация), от которых зависит прикладной слой |
+| `com.propertyview.domain.exception` | `DomainException`, `DomainValidationException`, `HotelNotFoundException`, `UnsupportedHistogramParamException`, `ForbiddenHotelAccessException` | Доменные исключения бизнес-уровня |
+| `com.propertyview.application.port.in` | `CreateHotelUseCase`, `AddAmenitiesUseCase`, `GetHotelUseCase`, `GetHotelsUseCase`, `SearchHotelsUseCase`, `GetHistogramUseCase` | Входные порты (интерфейсы сценариев использования системы) |
+| `com.propertyview.application.service` | `CreateHotelService`, `AddAmenitiesService`, `HotelQueryService`, `SearchHotelsService`, `HistogramService` | Оркестрация бизнес-сценариев, преобразование доменных моделей в прикладные DTO (`HotelSummary`, `HotelDetails`), логирование операций |
+| `com.propertyview.application.histogram` | `HistogramParam`, `HistogramProvider`, `RepositoryHistogramProvider` | Реализация паттерна **Strategy** для расчёта гистограмм по параметрам `brand`, `city`, `country`, `amenities` |
+| `com.propertyview.infrastructure.persistence` | `HotelRepositoryAdapter`, `HotelSpecifications`, `HotelEntity`, `AmenityEntity`, `HotelJpaRepository`, `AmenityJpaRepository`, `HotelPersistenceMapper` | Адаптер реляционной БД: JPA-сущности, динамические спецификации поиска (`Specification`), агрегирующие JPQL-запросы без проблемы N+1, мапперы MapStruct |
+| `com.propertyview.infrastructure.client` | `HttpAddressVerificationClient` | HTTP-клиент интеграции с внешним сервисом проверки адресов (тестируется через HTTP-заглушки) |
+| `com.propertyview.infrastructure.config` | `UseCaseConfig`, `OpenApiConfig` | Регистрация бинов Use Case (без загрязнения прикладного слоя Spring-аннотациями) и настройка OpenAPI/Swagger |
+| `com.propertyview.presentation.web` | `HotelController`, `HotelAmenityController`, `SearchController`, `HistogramController`, `GlobalExceptionHandler`, `HotelWebMapper`, Request/Response DTO | Приём HTTP-запросов, декларативная валидация (`@Valid`), формирование ответов и ошибок по стандарту RFC 7807 (`application/problem+json`) |
 
-## Architecture
-Clean Architecture in a single Maven module, so `mvn spring-boot:run` works from the project root.
-Layers are separated by packages, and ArchUnit tests check that dependencies point inward.
-See [ADR-001](docs/adr/0001-architecture-and-stack.md).
+## 5. Точки интеграции
 
-| Package | What is inside |
-|---|---|
-| `domain` | Hotel, value objects, exceptions, repository port. No frameworks. |
-| `application` | Use cases and histogram strategies. No frameworks. |
-| `infrastructure` | JPA adapter, Specifications, mappers, Liquibase, configuration. |
-| `presentation` | Controllers, request/response DTOs, error handler. |
+1. **Реляционные СУБД (H2 / PostgreSQL / MySQL):**
+   - Подключение через JDBC и пул соединений HikariCP.
+   - Управление схемой данных исключительно через Liquibase (`src/main/resources/db/changelog/db.changelog-master.yaml`), таблицы `hotel`, `amenity`, `hotel_amenity`.
+   - Поддержка переключения СУБД профилями конфигурации (`default`/`local`/`demo` — H2, `postgres` — PostgreSQL на порту `5433`, `mysql` — MySQL на порту `3307`).
+2. **Внешний HTTP-сервис верификации адресов (`AddressVerificationPort` / `HttpAddressVerificationClient`):**
+   - Интеграция по протоколу HTTP/JSON через Spring `RestClient` для проверки корректности почтового адреса и страны при необходимости внешней верификации.
+3. **OpenAPI 3.0 / Swagger UI:**
+   - Автоматическая генерация контракта API по адресу `/property-view/v3/api-docs` и интерактивная консоль `/property-view/swagger-ui.html`.
+4. **Веб-клиент каталога (Static Web UI):**
+   - Клиентское одностраничное веб-приложение (`src/main/resources/static/index.html`), взаимодействующее с backend по REST API (`/property-view/hotels`, `/property-view/search`, `/property-view/histogram/{param}`).
 
-Patterns used: Repository (port and adapter), Use case, Strategy (histogram), Specification (search), DTO and Mapper.
+## 6. Сводка API-эндпоинтов
 
-## Database
-The schema is created only by Liquibase (YAML files in `src/main/resources/db/changelog`).
-Hibernate only validates it.
+Все маршруты имеют общий префикс `/property-view` и работают на порту `8092`:
 
-| Profile | Purpose |
-|---|---|
-| (default) | in-memory H2, no seed data |
-| `demo` | adds demo hotels (Liquibase context `demo`) |
-| `local` | H2 console and SQL logging |
-| `postgres` | PostgreSQL |
-| `mysql` | MySQL |
+| Метод | Маршрут | Описание | Коды ответов |
+|---|---|---|---|
+| `GET` | `/property-view/hotels` | Получение краткого списка всех отелей | `200 OK` |
+| `GET` | `/property-view/hotels/{id}` | Получение полной карточки отеля по его `id` | `200 OK`, `400 Bad Request`, `404 Not Found` |
+| `POST` | `/property-view/hotels` | Создание нового отеля (возвращает `Location` и краткую карточку) | `201 Created`, `400 Bad Request`, `401 Unauthorized` |
+| `POST` | `/property-view/hotels/{id}/amenities` | Добавление списка удобств к отелю | `200 OK`, `400 Bad Request`, `401/403`, `404 Not Found` |
+| `GET` | `/property-view/search` | Поиск отелей по `name`, `brand`, `city`, `country`, `amenities` | `200 OK` |
+| `GET` | `/property-view/histogram/{param}` | Гистограмма количества отелей по `brand`, `city`, `country`, `amenities` | `200 OK`, `400 Bad Request` |
 
-Switching to another database (needs Docker):
+## 7. Инструкция по сборке, запуску и тестированию
 
-    docker compose --profile postgres up -d --wait
-    mvn spring-boot:run -Ppostgres -Dspring-boot.run.profiles=postgres
+### Предварительные требования
+- **JDK 21**
+- **Maven 3.9+** (либо встроенный скрипт `./mvnw`)
+- **Docker & Docker Compose** (опционально — для запуска с PostgreSQL или MySQL)
 
-    docker compose --profile mysql up -d --wait
-    mvn spring-boot:run -Pmysql -Dspring-boot.run.profiles=mysql
+### Сборка и запуск приложения (H2 in-memory по умолчанию)
+```bash
+./mvnw clean package
+./mvnw spring-boot:run
+```
+После запуска доступны:
+- **Веб-интерфейс каталога отелей:** `http://localhost:8092/property-view/index.html`
+- **Swagger UI:** `http://localhost:8092/property-view/swagger-ui.html`
+- **OpenAPI JSON:** `http://localhost:8092/property-view/v3/api-docs`
 
-`-P` adds the JDBC driver, `-Dspring-boot.run.profiles` selects the connection settings.
-The compose databases use ports 5433 (PostgreSQL) and 3307 (MySQL) to avoid clashes with local installations.
-Another storage (for example MongoDB) would need only a new implementation of the `HotelRepository` port.
+### Запуск с демонстрационными данными (профиль `demo`)
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
+```
 
-Note: MySQL compares text case-insensitively by default, so histogram values that differ only by case are merged there.
+### Переключение на PostgreSQL или MySQL (через Docker Compose)
+```bash
+# PostgreSQL (порт 5433)
+docker compose --profile postgres up -d --wait
+./mvnw spring-boot:run -Ppostgres -Dspring-boot.run.profiles=postgres
 
-## Tests
+# MySQL (порт 3307)
+docker compose --profile mysql up -d --wait
+./mvnw spring-boot:run -Pmysql -Dspring-boot.run.profiles=mysql
+```
 
-    mvn verify
+### Запуск тестов, проверка покрытия (JaCoCo) и статического анализа (Checkstyle)
+```bash
+# Полный цикл сборки, тестов, проверки покрытия (>=70%) и линтера
+./mvnw clean verify
 
-- unit tests for the domain and services
-- `@DataJpaTest` for migrations, repository and query counts
-- `@WebMvcTest` for controllers and validation
-- an end-to-end test with `@SpringBootTest` over real HTTP
-- ArchUnit tests for the layer rules
+# Быстрый smoke-тест по работающему приложению
+bash scripts/smoke.sh
+```
+Отчёт о покрытии кода тестами генерируется в `target/site/jacoco/index.html`.
 
-GitHub Actions runs `mvn verify` on JDK 21 for every pull request.
-
-## Known limitations
-**Concurrent Amenity Creation:** If two concurrent requests attempt to create the exact same new amenity simultaneously, a database uniqueness violation (`uq_amenity_normalized_name`) may occur due to race conditions. This is acceptable for the scope of this technical task and can be resolved in a production environment by adding transaction retries or a find-or-create upsert mechanism.
+## 8. Документация проекта и результаты лабораторных работ
+- [Архитектурное решение ADR-001](docs/adr/0001-architecture-and-stack.md)
+- [Спецификация требований, верификация и диаграммы (Задание 1)](docs/SRS.md)
+- [Реестр обнаруженных дефектов и несоответствий (Задания 1, 3)](ISSUES.md)
+- [План тестирования (Задание 3)](docs/TEST_PLAN.md)
+- [Чек-лист проверок по модулям (Задание 3)](docs/CHECKLIST.md)
+- [Каталог тест-кейсов и результаты прогона (Задание 3)](docs/TEST_CASES.md)
+- [Отчёт по верстке, кроссбраузерности, Postman API, безопасности и UI-автотестам (Задание 4)](docs/LAB4_REPORT.md)
+- [План и отчёт нагрузочного тестирования, линтер (Задание 5)](docs/LOAD_TEST_PLAN.md) / [Отчёт нагрузочного тестирования](docs/LOAD_TEST_REPORT.md)
+- [Матрица трассируемости требований и тестов (Задание 5)](docs/TRACEABILITY_MATRIX.md)

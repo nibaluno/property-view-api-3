@@ -13,9 +13,13 @@ public enum HistogramParam {
 
     private final String value;
 
-    HistogramParam(String value) { this.value = value; }
+    HistogramParam(String value) {
+        this.value = value;
+    }
 
-    public String value() { return value; }
+    public String value() {
+        return value;
+    }
 
     public static List<String> supportedValues() {
         return Arrays.stream(values()).map(HistogramParam::value).toList();
@@ -24,7 +28,9 @@ public enum HistogramParam {
     public static HistogramParam fromValue(String raw) {
         if (raw != null) {
             for (HistogramParam p : values()) {
-                if (p.value.equalsIgnoreCase(raw.strip())) return p;
+                if (p.value.equalsIgnoreCase(raw.strip())) {
+                    return p;
+                }
             }
         }
         throw new UnsupportedHistogramParamException(raw, supportedValues());

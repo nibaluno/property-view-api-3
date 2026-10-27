@@ -1,0 +1,158 @@
+{
+  "executedAt": "2026-10-26T23:34:55.361786",
+  "totalTestCases": 30,
+  "passed": 29,
+  "failedKnownDefects": 1,
+  "passRatePercent": 96.67,
+  "concurrencyCheckTC29": {
+    "thread1Status": 500,
+    "thread2Status": 200,
+    "defectId": "DEF-01"
+  },
+  "postmanRun": {
+    "collectionName": "Property View API — Full Test Collection",
+    "executedAt": "2026-10-26T23:34:55.361132",
+    "totalRequests": 15,
+    "passedRequests": 15,
+    "failedRequests": 0,
+    "totalAssertions": 24,
+    "passedAssertions": 24,
+    "results": [
+      {
+        "name": "1. Auth — Login as Alice (saves authToken)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/auth/login",
+        "status": 200,
+        "responseTimeMs": 41.72,
+        "passed": true,
+        "responsePreview": "{\"token\":\"pv-token-alice\",\"tokenType\":\"Bearer\",\"username\":\"alice\"}"
+      },
+      {
+        "name": "2. Auth — Login as Bob (saves otherToken for IDOR test)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/auth/login",
+        "status": 200,
+        "responseTimeMs": 2.18,
+        "passed": true,
+        "responsePreview": "{\"token\":\"pv-token-bob\",\"tokenType\":\"Bearer\",\"username\":\"bob\"}"
+      },
+      {
+        "name": "3. Hotels — Create Hotel (Positive, saves hotelId)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/hotels",
+        "status": 201,
+        "responseTimeMs": 45.15,
+        "passed": true,
+        "responsePreview": "{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"address\":\"9 Pobediteley Avenue, Minsk, 220004, Belarus\",\"phone\":\"+375 17 309-80-00\"}"
+      },
+      {
+        "name": "4. Amenities — Add Amenities to Created Hotel (Positive)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/hotels/1/amenities",
+        "status": 200,
+        "responseTimeMs": 42.48,
+        "passed": true,
+        "responsePreview": "{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"brand\":\"Hilton\",\"address\":{\"houseNumber\":9,\"street\":\"Pobediteley Avenue\",\"city\":\"Minsk\",\"country\":\"Belarus\",\"postCode\":\"220004\"},\"contacts\":{\"phone\":\"+375 17 309-80-00\",\"email"
+      },
+      {
+        "name": "5. Hotels — Get Hotel Details by ID (Positive)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels/1",
+        "status": 200,
+        "responseTimeMs": 3.2,
+        "passed": true,
+        "responsePreview": "{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"brand\":\"Hilton\",\"address\":{\"houseNumber\":9,\"street\":\"Pobediteley Avenue\",\"city\":\"Minsk\",\"country\":\"Belarus\",\"postCode\":\"220004\"},\"contacts\":{\"phone\":\"+375 17 309-80-00\",\"email"
+      },
+      {
+        "name": "6. Hotels — Get All Hotels Brief List (Positive)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels",
+        "status": 200,
+        "responseTimeMs": 3.02,
+        "passed": true,
+        "responsePreview": "[{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"address\":\"9 Pobediteley Avenue, Minsk, 220004, Belarus\",\"phone\":\"+375 17 309-80-00\"}]"
+      },
+      {
+        "name": "7. Search — Filter by City and Amenities (Positive)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/search?city=minsk&amenities=Free%20WiFi,Concierge",
+        "status": 200,
+        "responseTimeMs": 16.75,
+        "passed": true,
+        "responsePreview": "[{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"address\":\"9 Pobediteley Avenue, Minsk, 220004, Belarus\",\"phone\":\"+375 17 309-80-00\"}]"
+      },
+      {
+        "name": "8. Histogram — Group by Amenities (Positive)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/histogram/amenities",
+        "status": 200,
+        "responseTimeMs": 9.45,
+        "passed": true,
+        "responsePreview": "{\"Concierge\":1,\"Free WiFi\":1,\"Free parking\":1}"
+      },
+      {
+        "name": "9. Security — Claim Ownership with Alice Token (Chained Request)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/hotels/1/claim",
+        "status": 204,
+        "responseTimeMs": 3.5,
+        "passed": true,
+        "responsePreview": ""
+      },
+      {
+        "name": "10. Security — Access Management Zone without Auth (Negative 401)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels/1/management",
+        "status": 401,
+        "responseTimeMs": 6.26,
+        "passed": true,
+        "responsePreview": "{\"detail\":\"Missing Authorization header\",\"instance\":\"/property-view/hotels/1/management\",\"status\":401,\"title\":\"Unauthorized\"}"
+      },
+      {
+        "name": "11. Security — IDOR Attempt by Bob on Alice Hotel (Negative 403)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels/1/management",
+        "status": 403,
+        "responseTimeMs": 3.22,
+        "passed": true,
+        "responsePreview": "{\"detail\":\"Access denied: user 'bob' is not authorized to manage hotel with id 1\",\"instance\":\"/property-view/hotels/1/management\",\"status\":403,\"title\":\"Forbidden\"}"
+      },
+      {
+        "name": "12. Security — Owner Access Management Zone with Alice Token (Positive 200)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels/1/management",
+        "status": 200,
+        "responseTimeMs": 2.56,
+        "passed": true,
+        "responsePreview": "{\"id\":1,\"name\":\"DoubleTree by Hilton Minsk\",\"description\":\"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\"brand\":\"Hilton\",\"address\":{\"houseNumber\":9,\"street\":\"Pobediteley Avenue\",\"city\":\"Minsk\",\"country\":\"Belarus\",\"postCode\":\"220004\"},\"contacts\":{\"phone\":\"+375 17 309-80-00\",\"email"
+      },
+      {
+        "name": "13. Negative — Create Hotel with Invalid Payload (400 Bad Request)",
+        "method": "POST",
+        "url": "http://localhost:8092/property-view/hotels",
+        "status": 400,
+        "responseTimeMs": 8.7,
+        "passed": true,
+        "responsePreview": "{\"detail\":\"Request validation failed\",\"instance\":\"/property-view/hotels\",\"status\":400,\"title\":\"Validation failed\",\"errors\":{\"contacts\":\"must not be null\",\"arrivalTime\":\"must not be null\",\"name\":\"must not be blank\",\"address\":\"must not be null\",\"brand\":\"must not be blank\"}}"
+      },
+      {
+        "name": "14. Negative — Unknown Histogram Parameter (400 Bad Request)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/histogram/stars",
+        "status": 400,
+        "responseTimeMs": 1.82,
+        "passed": true,
+        "responsePreview": "{\"detail\":\"Unsupported histogram parameter 'stars'. Supported: brand, city, country, amenities\",\"instance\":\"/property-view/histogram/stars\",\"status\":400,\"title\":\"Invalid request\"}"
+      },
+      {
+        "name": "15. Negative — Unknown Hotel ID and Non-existent Endpoint (404 Not Found)",
+        "method": "GET",
+        "url": "http://localhost:8092/property-view/hotels/999999",
+        "status": 404,
+        "responseTimeMs": 2.34,
+        "passed": true,
+        "responsePreview": "{\"detail\":\"Hotel with id 999999 was not found\",\"instance\":\"/property-view/hotels/999999\",\"status\":404,\"title\":\"Hotel not found\"}"
+      }
+    ]
+  }
+}

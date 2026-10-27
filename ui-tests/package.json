@@ -1,0 +1,11 @@
+{
+  "name": "property-view-ui-tests",
+  "version": "1.0.0",
+  "description": "Playwright UI E2E tests with Page Object Model for Property View Catalog",
+  "scripts": {
+    "test:ui": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

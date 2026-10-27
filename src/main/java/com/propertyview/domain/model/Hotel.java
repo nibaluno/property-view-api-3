@@ -1,6 +1,11 @@
 package com.propertyview.domain.model;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import static com.propertyview.domain.model.Preconditions.*;
 
 /**
@@ -17,7 +22,6 @@ public final class Hotel {
     private final ArrivalTime arrivalTime;
     private final Set<Amenity> amenities;
 
-
     private Hotel(Long id, String name, String description, String brand, Address address,
         Contacts contacts, ArrivalTime arrivalTime, Collection<Amenity> amenities) {
 
@@ -31,12 +35,10 @@ public final class Hotel {
         this.amenities = new LinkedHashSet<>(amenities);
     }
 
-
     public static Hotel create(String name, String description, String brand,
                                Address address, Contacts contacts, ArrivalTime arrivalTime) {
         return new Hotel(null, name, description, brand, address, contacts, arrivalTime, List.of());
     }
-
 
     public static Hotel restore(Long id, String name, String description, String brand, Address address,
                                 Contacts contacts, ArrivalTime arrivalTime, Collection<Amenity> amenities) {
@@ -44,11 +46,12 @@ public final class Hotel {
             address, contacts, arrivalTime, amenities);
     }
 
-
     public boolean addAmenities(Collection<Amenity> toAdd) {
         requireNonNull(toAdd, "amenities");
         boolean changed = false;
-        for (Amenity a : toAdd) changed |= amenities.add(requireNonNull(a, "amenity"));
+        for (Amenity a : toAdd) {
+            changed |= amenities.add(requireNonNull(a, "amenity"));
+        }
         return changed;
     }
 

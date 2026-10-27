@@ -1,0 +1,368 @@
+{
+  "info": {
+    "_postman_id": "9f8c2a10-4b3e-4d1a-9c71-202610260001",
+    "name": "Property View API — Full Test Collection",
+    "description": "Коллекция Postman для тестирования всех эндпоинтов Property View API (позитивные, негативные, проверки безопасности и связывание запросов через токен авторизации и ID отеля).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8092/property-view"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "otherToken",
+      "value": ""
+    },
+    {
+      "key": "hotelId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth — Login as Alice (saves authToken)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Token is issued for alice', function () {",
+              "  pm.expect(body.token).to.equal('pv-token-alice');",
+              "  pm.expect(body.tokenType).to.equal('Bearer');",
+              "});",
+              "pm.collectionVariables.set('authToken', body.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"alice\", \"password\": \"secret123\"}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "2. Auth — Login as Bob (saves otherToken for IDOR test)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('otherToken', pm.response.json().token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"bob\", \"password\": \"secret123\"}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "3. Hotels — Create Hotel (Positive, saves hotelId)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 201 Created', function () { pm.response.to.have.status(201); });",
+              "pm.test('Location header is present', function () { pm.response.to.have.header('Location'); });",
+              "const body = pm.response.json();",
+              "pm.test('Summary fields are formatted properly', function () {",
+              "  pm.expect(body.id).to.be.a('number');",
+              "  pm.expect(body.name).to.equal('DoubleTree by Hilton Minsk');",
+              "  pm.expect(body.address).to.equal('9 Pobediteley Avenue, Minsk, 220004, Belarus');",
+              "});",
+              "pm.collectionVariables.set('hotelId', String(body.id));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"DoubleTree by Hilton Minsk\",\n  \"description\": \"The DoubleTree by Hilton Hotel Minsk offers 193 luxurious rooms\",\n  \"brand\": \"Hilton\",\n  \"address\": {\"houseNumber\": 9, \"street\": \"Pobediteley Avenue\", \"city\": \"Minsk\", \"country\": \"Belarus\", \"postCode\": \"220004\"},\n  \"contacts\": {\"phone\": \"+375 17 309-80-00\", \"email\": \"doubletreeminsk.info@hilton.com\"},\n  \"arrivalTime\": {\"checkIn\": \"14:00\", \"checkOut\": \"12:00\"}\n}"
+        },
+        "url": "{{baseUrl}}/hotels"
+      }
+    },
+    {
+      "name": "4. Amenities — Add Amenities to Created Hotel (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Deduplicates case-insensitively and preserves order', function () {",
+              "  pm.expect(body.amenities).to.deep.equal(['Free parking', 'Free WiFi', 'Concierge']);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "[\"Free parking\", \"  Free   WiFi \", \"Concierge\", \"free wifi\"]"
+        },
+        "url": "{{baseUrl}}/hotels/{{hotelId}}/amenities"
+      }
+    },
+    {
+      "name": "5. Hotels — Get Hotel Details by ID (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('Returns full nested structure', function () {",
+              "  pm.expect(body.brand).to.equal('Hilton');",
+              "  pm.expect(body.address.city).to.equal('Minsk');",
+              "  pm.expect(body.arrivalTime.checkIn).to.equal('14:00');",
+              "  pm.expect(body.amenities.length).to.equal(3);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/hotels/{{hotelId}}"
+      }
+    },
+    {
+      "name": "6. Hotels — Get All Hotels Brief List (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Returns non-empty array', function () {",
+              "  pm.expect(pm.response.json().length).to.be.above(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/hotels"
+      }
+    },
+    {
+      "name": "7. Search — Filter by City and Amenities (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "const list = pm.response.json();",
+              "pm.test('Finds DoubleTree by Hilton Minsk', function () {",
+              "  pm.expect(list.some(h => h.name === 'DoubleTree by Hilton Minsk')).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/search?city=minsk&amenities=Free%20WiFi,Concierge"
+      }
+    },
+    {
+      "name": "8. Histogram — Group by Amenities (Positive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "const map = pm.response.json();",
+              "pm.test('Contains Free WiFi count >= 1', function () {",
+              "  pm.expect(map['Free WiFi']).to.be.at.least(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/histogram/amenities"
+      }
+    },
+    {
+      "name": "9. Security — Claim Ownership with Alice Token (Chained Request)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 204 No Content', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": "{{baseUrl}}/hotels/{{hotelId}}/claim"
+      }
+    },
+    {
+      "name": "10. Security — Access Management Zone without Auth (Negative 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/hotels/{{hotelId}}/management"
+      }
+    },
+    {
+      "name": "11. Security — IDOR Attempt by Bob on Alice Hotel (Negative 403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 403 Forbidden', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{otherToken}}" }],
+        "url": "{{baseUrl}}/hotels/{{hotelId}}/management"
+      }
+    },
+    {
+      "name": "12. Security — Owner Access Management Zone with Alice Token (Positive 200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": "{{baseUrl}}/hotels/{{hotelId}}/management"
+      }
+    },
+    {
+      "name": "13. Negative — Create Hotel with Invalid Payload (400 Bad Request)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 400 Bad Request', function () { pm.response.to.have.status(400); });",
+              "pm.test('Returns RFC 7807 ProblemDetail with errors map', function () {",
+              "  const err = pm.response.json();",
+              "  pm.expect(err.title).to.equal('Validation failed');",
+              "  pm.expect(err.errors).to.be.an('object');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \" \", \"brand\": \"\"}"
+        },
+        "url": "{{baseUrl}}/hotels"
+      }
+    },
+    {
+      "name": "14. Negative — Unknown Histogram Parameter (400 Bad Request)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 400 Bad Request', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/histogram/stars"
+      }
+    },
+    {
+      "name": "15. Negative — Unknown Hotel ID and Non-existent Endpoint (404 Not Found)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 404 Not Found', function () { pm.response.to.have.status(404); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/hotels/999999"
+      }
+    }
+  ]
+}

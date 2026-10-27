@@ -6,11 +6,13 @@ import com.propertyview.application.histogram.RepositoryHistogramProvider;
 import com.propertyview.application.port.in.AddAmenitiesUseCase;
 import com.propertyview.application.port.in.CreateHotelUseCase;
 import com.propertyview.application.port.in.GetHistogramUseCase;
+import com.propertyview.application.port.in.ManageHotelUseCase;
 import com.propertyview.application.port.in.SearchHotelsUseCase;
 import com.propertyview.application.service.AddAmenitiesService;
 import com.propertyview.application.service.CreateHotelService;
 import com.propertyview.application.service.HistogramService;
 import com.propertyview.application.service.HotelQueryService;
+import com.propertyview.application.service.ManageHotelService;
 import com.propertyview.application.service.SearchHotelsService;
 import com.propertyview.domain.port.HotelRepository;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +43,11 @@ public class UseCaseConfig {
     @Bean
     SearchHotelsUseCase searchHotelsUseCase(HotelRepository hotels) {
         return new SearchHotelsService(hotels);
+    }
+
+    @Bean
+    ManageHotelUseCase manageHotelUseCase(HotelRepository hotels) {
+        return new ManageHotelService(hotels);
     }
 
     @Bean

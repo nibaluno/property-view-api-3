@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property View — Hotel Catalog &amp; Analytics</title>
+  <link rel="icon" type="image/svg+xml" href="/property-view/favicon.svg">
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --muted: #475569;
+      --danger: #dc2626;
+      --success: #15803d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .logo-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+    .logo-link:hover, .logo-link:focus {
+      text-decoration: underline;
+      outline: 2px solid #93c5fd;
+      outline-offset: 4px;
+    }
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+    .nav-links a {
+      color: #e2e8f0;
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      transition: background 0.15s ease;
+    }
+    .nav-links a:hover, .nav-links a:focus {
+      background: var(--primary-hover);
+      color: #fff;
+      outline: 2px solid #93c5fd;
+    }
+    main {
+      max-width: 1200px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+      margin-bottom: 1.25rem;
+    }
+    .panel h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.1rem;
+      color: var(--primary);
+    }
+    .form-group {
+      margin-bottom: 0.75rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: var(--muted);
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.92rem;
+      background: #fff;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-hover);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    }
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn:focus {
+      outline: 2px solid var(--primary-hover);
+      outline-offset: 2px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .hotels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .hotel-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .hotel-card-body {
+      display: block;
+    }
+    .hotel-thumb {
+      float: left;
+      width: 56px;
+      height: 56px;
+      margin: 0 0.75rem 0.4rem 0;
+      border-radius: 8px;
+      background: #dbeafe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .hotel-card h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1.02rem;
+    }
+    .hotel-meta {
+      font-size: 0.86rem;
+      color: var(--muted);
+      margin: 0.25rem 0;
+    }
+    .status-banner {
+      padding: 0.65rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .status-banner.error {
+      display: block;
+      background: #fef2f2;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+    .status-banner.success {
+      display: block;
+      background: #f0fdf4;
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+    .badge {
+      display: inline-block;
+      background: #e0e7ff;
+      color: #1e3a8a;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      margin: 0.15rem 0.2rem 0.15rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/property-view/index.html" id="logo-link" class="logo-link">
+      <img src="/property-view/favicon.svg" alt="Property View Logo" width="28" height="28">
+      <span>Property View Catalog</span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="/property-view/index.html" id="nav-catalog">Catalog</a>
+      <a href="#histogram-section" id="nav-analytics">Analytics</a>
+      <a href="/property-view/swagger-ui.html" id="nav-swagger">Swagger API</a>
+    </nav>
+  </header>
+
+  <main>
+    <aside>
+      <section class="panel" aria-labelledby="search-heading">
+        <h2 id="search-heading">Search &amp; Filter Hotels</h2>
+        <form id="search-form">
+          <div class="form-group">
+            <label for="search-name">Hotel Name</label>
+            <input id="search-name" name="name" type="text" placeholder="e.g. DoubleTree">
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="search-brand">Brand</label>
+              <input id="search-brand" name="brand" type="text" placeholder="e.g. Hilton">
+            </div>
+            <div class="form-group">
+              <label for="search-city">City</label>
+              <input id="search-city" name="city" type="text" placeholder="e.g. Minsk">
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="search-country">Country</label>
+              <input id="search-country" name="country" type="text" placeholder="e.g. Belarus">
+            </div>
+            <div class="form-group">
+              <label for="search-amenities">Amenities</label>
+              <input id="search-amenities" name="amenities" type="text" placeholder="Free WiFi, Pool">
+            </div>
+          </div>
+          <div class="btn-group">
+            <button type="submit" id="search-submit-btn" class="btn btn-primary">Search</button>
+            <button type="button" id="search-reset-btn" class="btn btn-secondary">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="create-heading">
+        <h2 id="create-heading">Register New Hotel</h2>
+        <form id="create-hotel-form">
+          <div class="form-group">
+            <label for="hotel-name">Name *</label>
+            <input id="hotel-name" required maxlength="255" placeholder="DoubleTree by Hilton Minsk">
+          </div>
+          <div class="form-group">
+            <label for="hotel-brand">Brand *</label>
+            <input id="hotel-brand" required maxlength="255" placeholder="Hilton">
+          </div>
+          <div class="form-group">
+            <label for="hotel-description">Description</label>
+            <textarea id="hotel-description" rows="2" maxlength="4000" placeholder="Luxury rooms in city center"></textarea>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="hotel-house">House # *</label>
+              <input id="hotel-house" type="number" min="1" required value="9">
+            </div>
+            <div class="form-group">
+              <label for="hotel-street">Street *</label>
+              <input id="hotel-street" required value="Pobediteley Avenue">
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="hotel-city">City *</label>
+              <input id="hotel-city" required value="Minsk">
+            </div>
+            <div class="form-group">
+              <label for="hotel-country">Country *</label>
+              <input id="hotel-country" required value="Belarus">
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="hotel-postcode">Post Code *</label>
+              <input id="hotel-postcode" required value="220004">
+            </div>
+            <div class="form-group">
+              <label for="hotel-phone">Phone *</label>
+              <input id="hotel-phone" required value="+375 17 309-80-00">
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="hotel-email">Email *</label>
+              <input id="hotel-email" type="email" required value="info@hilton.com">
+            </div>
+            <div class="form-group">
+              <label for="hotel-checkin">Check-In *</label>
+              <input id="hotel-checkin" required value="14:00" pattern="^([01]\d|2[0-3]):[0-5]\d$">
+            </div>
+          </div>
+          <button type="submit" id="create-hotel-btn" class="btn btn-primary" style="width:100%">Create Hotel</button>
+        </form>
+      </section>
+    </aside>
+
+    <section>
+      <div id="status-banner" class="status-banner" role="status"></div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h2 style="margin:0">Hotels Directory (<span id="hotel-count">0</span>)</h2>
+          <button type="button" id="refresh-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+        <div id="empty-state" class="empty-state">No hotels found matching the current criteria.</div>
+        <div id="hotels-grid" class="hotels-grid"></div>
+      </div>
+
+      <div id="hotel-details-panel" class="panel" style="display:none">
+        <h2 id="details-title">Hotel Details</h2>
+        <div id="details-content"></div>
+        <form id="add-amenity-form" style="margin-top:0.85rem;display:flex;gap:0.5rem;">
+          <input id="amenity-input" type="text" placeholder="Add amenities (comma-separated, e.g. Free WiFi, Pool)">
+          <button type="submit" id="add-amenity-btn" class="btn btn-primary">Add Amenities</button>
+        </form>
+      </div>
+
+      <div id="histogram-section" class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+          <h2 style="margin:0">Analytics Histogram</h2>
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary hist-btn" data-param="city">By City</button>
+            <button type="button" class="btn btn-secondary hist-btn" data-param="brand">By Brand</button>
+            <button type="button" class="btn btn-secondary hist-btn" data-param="country">By Country</button>
+            <button type="button" class="btn btn-secondary hist-btn" data-param="amenities">By Amenities</button>
+          </div>
+        </div>
+        <div id="histogram-output" class="hotel-meta">Select a parameter to view distribution.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API = '/property-view';
+    let selectedHotelId = null;
+
+    function showStatus(msg, isError = false) {
+      const banner = document.getElementById('status-banner');
+      banner.textContent = msg;
+      banner.className = 'status-banner ' + (isError ? 'error' : 'success');
+    }
+
+    function renderHotels(hotels) {
+      const grid = document.getElementById('hotels-grid');
+      const empty = document.getElementById('empty-state');
+      document.getElementById('hotel-count').textContent = String(hotels.length);
+      grid.innerHTML = '';
+      if (!hotels.length) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      hotels.forEach(h => {
+        const card = document.createElement('article');
+        card.className = 'hotel-card';
+        card.dataset.hotelId = h.id;
+        card.innerHTML = `
+          <div class="hotel-card-body">
+            <div class="hotel-thumb" aria-hidden="true">
+              <img src="/property-view/favicon.svg" alt="" width="32" height="32">
+            </div>
+            <h3 class="hotel-card-title">${escapeHtml(h.name)}</h3>
+            <p class="hotel-meta">${escapeHtml(h.description || 'No description provided.')}</p>
+            <p class="hotel-meta"><strong>Address:</strong> ${escapeHtml(h.address)}</p>
+            <p class="hotel-meta"><strong>Phone:</strong> ${escapeHtml(h.phone)}</p>
+          </div>
+          <div style="margin-top:0.75rem">
+            <button type="button" class="btn btn-secondary view-details-btn" data-id="${h.id}">View Details</button>
+          </div>
+        `;
+        card.querySelector('.view-details-btn').addEventListener('click', () => loadHotelDetails(h.id));
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function loadAllHotels() {
+      const res = await fetch(`${API}/hotels`);
+      const data = await res.json();
+      renderHotels(data);
+    }
+
+    async function loadHotelDetails(id) {
+      selectedHotelId = id;
+      const res = await fetch(`${API}/hotels/${id}`);
+      if (!res.ok) {
+        showStatus(`Hotel #${id} not found`, true);
+        return;
+      }
+      const d = await res.json();
+      const panel = document.getElementById('hotel-details-panel');
+      panel.style.display = 'block';
+      document.getElementById('details-title').textContent = `${d.name} (${d.brand})`;
+      const badges = (d.amenities || []).map(a => `<span class="badge">${escapeHtml(a)}</span>`).join(' ') || 'None';
+      document.getElementById('details-content').innerHTML = `
+        <p class="hotel-meta"><strong>City / Country:</strong> ${escapeHtml(d.address.city)}, ${escapeHtml(d.address.country)} (${escapeHtml(d.address.postCode)})</p>
+        <p class="hotel-meta"><strong>Email:</strong> ${escapeHtml(d.contacts.email)} | <strong>Check-In:</strong> ${escapeHtml(d.arrivalTime.checkIn)}</p>
+        <div id="details-amenities"><strong>Amenities:</strong> ${badges}</div>
+      `;
+    }
+
+    document.getElementById('search-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const params = new URLSearchParams();
+      ['name', 'brand', 'city', 'country', 'amenities'].forEach(f => {
+        const val = document.getElementById(`search-${f}`).value.trim();
+        if (val) params.set(f, val);
+      });
+      const res = await fetch(`${API}/search?${params.toString()}`);
+      renderHotels(await res.json());
+    });
+
+    document.getElementById('search-reset-btn').addEventListener('click', () => {
+      document.getElementById('search-form').reset();
+      loadAllHotels();
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', loadAllHotels);
+
+    document.getElementById('create-hotel-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('hotel-name').value,
+        brand: document.getElementById('hotel-brand').value,
+        description: document.getElementById('hotel-description').value || null,
+        address: {
+          houseNumber: Number(document.getElementById('hotel-house').value),
+          street: document.getElementById('hotel-street').value,
+          city: document.getElementById('hotel-city').value,
+          country: document.getElementById('hotel-country').value,
+          postCode: document.getElementById('hotel-postcode').value
+        },
+        contacts: {
+          phone: document.getElementById('hotel-phone').value,
+          email: document.getElementById('hotel-email').value
+        },
+        arrivalTime: {
+          checkIn: document.getElementById('hotel-checkin').value,
+          checkOut: '12:00'
+        }
+      };
+      const res = await fetch(`${API}/hotels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        showStatus(err.detail || 'Validation failed', true);
+        return;
+      }
+      const created = await res.json();
+      showStatus(`Created hotel "${created.name}" (#${created.id})`);
+      await loadAllHotels();
+      await loadHotelDetails(created.id);
+    });
+
+    document.getElementById('add-amenity-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!selectedHotelId) return;
+      const raw = document.getElementById('amenity-input').value;
+      const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+      const res = await fetch(`${API}/hotels/${selectedHotelId}/amenities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(list)
+      });
+      if (!res.ok) {
+        showStatus('Failed to add amenities', true);
+        return;
+      }
+      document.getElementById('amenity-input').value = '';
+      showStatus('Amenities updated');
+      await loadHotelDetails(selectedHotelId);
+    });
+
+    document.querySelectorAll('.hist-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const param = btn.dataset.param;
+        const res = await fetch(`${API}/histogram/${param}`);
+        const data = await res.json();
+        const entries = Object.entries(data);
+        document.getElementById('histogram-output').innerHTML = entries.length
+          ? entries.map(([k, v]) => `<span class="badge">${escapeHtml(k)}: <strong>${v}</strong></span>`).join(' ')
+          : 'No data available for histogram.';
+      });
+    });
+
+    loadAllHotels();
+  </script>
+</body>
+</html>
